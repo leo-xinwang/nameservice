@@ -1,6 +1,12 @@
 package rest
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/cosmos/cosmos-sdk/client/context"
+
+	"github.com/gorilla/mux"
+)
 
 const (
 	restName = "name"

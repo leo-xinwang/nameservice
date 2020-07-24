@@ -3,8 +3,7 @@ package keeper
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/sdk-tutorials/nameservice/x/nameservice/types"
-	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/leo-xinwang/nameservice/x/nameservice/types"
 )
 
 type Keeper struct {
@@ -29,17 +28,17 @@ func (k Keeper) GetWhois(ctx sdk.Context, name string) types.Whois {
 
 	bz := store.Get([]byte(name))
 	var whois types.Whois
-	k.cdc.MustMarshalBinaryBare(bz, &whois)
+	k.cdc.MustUnmarshalBinaryBare(bz, &whois)
 	return whois
 }
 
 func (k Keeper) DeleteWhois(ctx sdk.Context, name string) {
 	store := ctx.KVStore(k.storeKey)
-	store.Deleter([]byte(name))
+	store.Delete([]byte(name))
 }
 
 func (k Keeper) ResolveName(ctx sdk.Context, name string) string {
-	return k.GetWhois(ctx, name).value
+	return k.GetWhois(ctx, name).Value
 }
 
 func (k Keeper) SetName(ctx sdk.Context, name string, value string) {
@@ -88,48 +87,4 @@ func NewKeeper(cdc *codec.Codec, storeKey sdk.StoreKey, coinKeeper types.BankKee
 		storeKey:   storeKey,
 		CoinKeeper: coinKeeper,
 	}
-}
-
-func queryResolve(ctx sdk.Context, path []string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
-	value := keeper.ResolveName(ctx, path[0])
-
-	if value == "" {
-		return []byte{}, sdkerrors.Wrap(sdkerrors.ErrUnknownRequest, "could not resolve name")
-	}
-
-	res, err := codec.MarshalJSONIndent(keeper.cdc, types.QueryResResolve{Value: value})
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
-	}
-
-	return res, nil
-}
-
-// nolint: unparam
-func queryWhois(ctx sdk.Context, path []string, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
-	whois := keeper.GetWhois(ctx, path[0])
-
-	res, err := codec.MarshalJSONIndent(keeper.cdc, whois)
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
-	}
-
-	return res, nil
-}
-
-func queryNames(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, error) {
-	var namesList types.QueryResNames
-
-	iterator := keeper.GetNamesIterator(ctx)
-
-	for ; iterator.Valid(); iterator.Next() {
-		namesList = append(namesList, string(iterator.Key()))
-	}
-
-	res, err := codec.MarshalJSONIndent(keeper.cdc, namesList)
-	if err != nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrJSONMarshal, err.Error())
-	}
-
-	return res, nil
 }
